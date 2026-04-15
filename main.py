@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 import httpx
-
+from sqlalchemy import and_
 from schemas import ProfileRequest, ProfileResponse
 from database import Base, engine, SessionLocal
 from models import Profile
@@ -128,3 +128,81 @@ async def create_profile(payload: ProfileRequest, db: Session = Depends(get_db))
             "created_at": new_profile.created_at,
         }
     }
+
+@app.get("/api/profiles/{profile_id}")
+async def get_profile(profile_id: str, db: Session = Depends(get_db)):
+
+    profile = db.query(Profile).filter(Profile.id == profile_id).first()
+
+    if not profile:
+        return JSONResponse(
+            status_code=404,
+            content={"status": "error", "message": "Profile not found"}
+        )
+
+    return {
+        "status": "success",
+        "data": {
+            "id": profile.id,
+            "name": profile.name,
+            "gender": profile.gender,
+            "gender_probability": profile.gender_probability,
+            "sample_size": profile.sample_size,
+            "age": profile.age,
+            "age_group": profile.age_group,
+            "country_id": profile.country_id,
+            "country_probability": profile.country_probability,
+            "created_at": profile.created_at,
+        }
+    }
+
+@app.get("/api/profiles")
+async def get_profiles(
+    gender: str = None,
+    country_id: str = None,
+    age_group: str = None,
+    db: Session = Depends(get_db)
+):
+
+    query = db.query(Profile)
+
+    if gender:
+        query = query.filter(Profile.gender.ilike(gender))
+    if country_id:
+        query = query.filter(Profile.country_id.ilike(country_id))
+    if age_group:
+        query = query.filter(Profile.age_group.ilike(age_group))
+
+    profiles = query.all()
+
+    return {
+        "status": "success",
+        "count": len(profiles),
+        "data": [
+            {
+                "id": p.id,
+                "name": p.name,
+                "gender": p.gender,
+                "age": p.age,
+                "age_group": p.age_group,
+                "country_id": p.country_id,
+            }
+            for p in profiles
+        ]
+    }
+
+@app.delete("/api/profiles/{profile_id}")
+async def delete_profile(profile_id: str, db: Session = Depends(get_db)):
+
+    profile = db.query(Profile).filter(Profile.id == profile_id).first()
+
+    if not profile:
+        return JSONResponse(
+            status_code=404,
+            content={"status": "error", "message": "Profile not found"}
+        )
+
+    db.delete(profile)
+    db.commit()
+
+    return JSONResponse(status_code=204, content=None)
