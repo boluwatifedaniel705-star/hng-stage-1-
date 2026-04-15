@@ -28,7 +28,7 @@ def get_db():
 
 
 @app.post("/api/profiles")
-async def create_profile(payload: dict, db: Session = Depends(get_db)):
+async def create_profile(payload: ProfileRequest, db: Session = Depends(get_db)):
     # Validation
     if "name" not in payload or not payload["name"]:
         raise HTTPException(
