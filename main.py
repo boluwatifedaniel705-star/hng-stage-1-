@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from schemas import ProfileResponse
+from schemas import ProfileResponse, ProfileData
 import httpx
 from database import Base, engine, SessionLocal
 from models import Profile
@@ -28,8 +28,8 @@ def get_db():
         db.close()
 
 
-@app.post("/api/profiles")
-async def create_profile(payload: ProfileResponse, db: Session = Depends(get_db)):
+@app.post("/api/profiles", response_model=ProfileResponse)
+async def create_profile(payload: ProfileData, db: Session = Depends(get_db)):
     # Validation
     if "name" not in payload or not payload["name"]:
         raise HTTPException(
@@ -37,7 +37,7 @@ async def create_profile(payload: ProfileResponse, db: Session = Depends(get_db)
             detail={"status": "error", "message": "Name is required"}
         )
 
-    name = payload["name"]
+    name = payload.name
 
     if not isinstance(name, str):
         raise HTTPException(
@@ -50,18 +50,17 @@ async def create_profile(payload: ProfileResponse, db: Session = Depends(get_db)
     if existing:
         return {
     "status": "success",
-    "message": "Profile already exists",
     "data": {
-        "id": existing.id,
-        "name": existing.name,
-        "gender": existing.gender,
-        "gender_probability": existing.gender_probability,
-        "sample_size": existing.sample_size,
-        "age": existing.age,
-        "age_group": existing.age_group,
-        "country_id": existing.country_id,
-        "country_probability": existing.country_probability,
-        "created_at": existing.created_at,
+        "id": new_profile.id,
+        "name": new_profile.name,
+        "gender": new_profile.gender,
+        "gender_probability": new_profile.gender_probability,
+        "sample_size": new_profile.sample_size,
+        "age": new_profile.age,
+        "age_group": new_profile.age_group,
+        "country_id": new_profile.country_id,
+        "country_probability": new_profile.country_probability,
+        "created_at": new_profile.created_at,
     }
 }
 
