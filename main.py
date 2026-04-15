@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from schemas import ProfileRequest
 import httpx
 from database import Base, engine, SessionLocal
 from models import Profile
