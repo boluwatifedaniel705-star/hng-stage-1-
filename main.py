@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-
+import httpx
 from database import Base, engine, SessionLocal
 from models import Profile
 from utils import generate_uuid_v7, utc_now, classify_age_group
