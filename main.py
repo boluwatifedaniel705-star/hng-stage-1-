@@ -48,10 +48,21 @@ async def create_profile(payload: dict, db: Session = Depends(get_db)):
     existing = db.query(Profile).filter(Profile.name == name).first()
     if existing:
         return {
-            "status": "success",
-            "message": "Profile already exists",
-            "data": existing.__dict__
-        }
+    "status": "success",
+    "message": "Profile already exists",
+    "data": {
+        "id": existing.id,
+        "name": existing.name,
+        "gender": existing.gender,
+        "gender_probability": existing.gender_probability,
+        "sample_size": existing.sample_size,
+        "age": existing.age,
+        "age_group": existing.age_group,
+        "country_id": existing.country_id,
+        "country_probability": existing.country_probability,
+        "created_at": existing.created_at,
+    }
+}
 
     # Call external APIs
     async with httpx.AsyncClient() as client:
@@ -105,6 +116,17 @@ async def create_profile(payload: dict, db: Session = Depends(get_db)):
 
     # Success response
     return {
-        "status": "success",
-        "data": new_profile.__dict__
+    "status": "success",
+    "data": {
+        "id": new_profile.id,
+        "name": new_profile.name,
+        "gender": new_profile.gender,
+        "gender_probability": new_profile.gender_probability,
+        "sample_size": new_profile.sample_size,
+        "age": new_profile.age,
+        "age_group": new_profile.age_group,
+        "country_id": new_profile.country_id,
+        "country_probability": new_profile.country_probability,
+        "created_at": new_profile.created_at,
     }
+}
