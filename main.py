@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from schemas import ProfileRequest
+from schemas import ProfileResponse
 import httpx
 from database import Base, engine, SessionLocal
 from models import Profile
@@ -29,7 +29,7 @@ def get_db():
 
 
 @app.post("/api/profiles")
-async def create_profile(payload: ProfileRequest, db: Session = Depends(get_db)):
+async def create_profile(payload: ProfileResponse, db: Session = Depends(get_db)):
     # Validation
     if "name" not in payload or not payload["name"]:
         raise HTTPException(
