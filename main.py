@@ -1,8 +1,10 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from schemas import ProfileRequest, ProfileResponse
 import httpx
+
+from schemas import ProfileRequest, ProfileResponse
 from database import Base, engine, SessionLocal
 from models import Profile
 from utils import generate_uuid_v7, utc_now, classify_age_group
@@ -30,41 +32,37 @@ def get_db():
 
 @app.post("/api/profiles", response_model=ProfileResponse)
 async def create_profile(payload: ProfileRequest, db: Session = Depends(get_db)):
-    # Validation
-    if "name" not in payload or not payload["name"]:
-        raise HTTPException(
+
+    #  Correct validation
+    if not payload.name:
+        return JSONResponse(
             status_code=400,
-            detail={"status": "error", "message": "Name is required"}
+            content={"status": "error", "message": "Name is required"}
         )
 
     name = payload.name
 
-    if not isinstance(name, str):
-        raise HTTPException(
-            status_code=422,
-            detail={"status": "error", "message": "Name must be a string"}
-        )
-
-    # Idempotency
+    #  Idempotency check
     existing = db.query(Profile).filter(Profile.name == name).first()
     if existing:
         return {
-    "status": "success",
-    "data": {
-        "id": new_profile.id,
-        "name": new_profile.name,
-        "gender": new_profile.gender,
-        "gender_probability": new_profile.gender_probability,
-        "sample_size": new_profile.sample_size,
-        "age": new_profile.age,
-        "age_group": new_profile.age_group,
-        "country_id": new_profile.country_id,
-        "country_probability": new_profile.country_probability,
-        "created_at": new_profile.created_at,
-    }
-}
+            "status": "success",
+            "message": "Profile already exists",
+            "data": {
+                "id": existing.id,
+                "name": existing.name,
+                "gender": existing.gender,
+                "gender_probability": existing.gender_probability,
+                "sample_size": existing.sample_size,
+                "age": existing.age,
+                "age_group": existing.age_group,
+                "country_id": existing.country_id,
+                "country_probability": existing.country_probability,
+                "created_at": existing.created_at,
+            }
+        }
 
-    # Call external APIs
+    #  Call external APIs
     async with httpx.AsyncClient() as client:
         g = await client.get(f"https://api.genderize.io?name={name}")
         a = await client.get(f"https://api.agify.io?name={name}")
@@ -74,29 +72,29 @@ async def create_profile(payload: ProfileRequest, db: Session = Depends(get_db))
     age_data = a.json()
     nat_data = n.json()
 
-    # Edge cases
+    #  Edge cases
     if gender_data.get("gender") is None or gender_data.get("count", 0) == 0:
-        raise HTTPException(
+        return JSONResponse(
             status_code=404,
-            detail={"status": "error", "message": "Gender data unavailable"}
+            content={"status": "error", "message": "Gender data unavailable"}
         )
 
     if age_data.get("age") is None:
-        raise HTTPException(
+        return JSONResponse(
             status_code=404,
-            detail={"status": "error", "message": "Age data unavailable"}
+            content={"status": "error", "message": "Age data unavailable"}
         )
 
     if not nat_data.get("country"):
-        raise HTTPException(
+        return JSONResponse(
             status_code=404,
-            detail={"status": "error", "message": "Country data unavailable"}
+            content={"status": "error", "message": "Country data unavailable"}
         )
 
-    # Country with highest probability
+    #  Get highest probability country
     best_country = max(nat_data["country"], key=lambda c: c["probability"])
 
-    # Process data
+    # Save to DB
     new_profile = Profile(
         id=generate_uuid_v7(),
         name=name,
@@ -116,17 +114,17 @@ async def create_profile(payload: ProfileRequest, db: Session = Depends(get_db))
 
     # Success response
     return {
-    "status": "success",
-    "data": {
-        "id": new_profile.id,
-        "name": new_profile.name,
-        "gender": new_profile.gender,
-        "gender_probability": new_profile.gender_probability,
-        "sample_size": new_profile.sample_size,
-        "age": new_profile.age,
-        "age_group": new_profile.age_group,
-        "country_id": new_profile.country_id,
-        "country_probability": new_profile.country_probability,
-        "created_at": new_profile.created_at,
+        "status": "success",
+        "data": {
+            "id": new_profile.id,
+            "name": new_profile.name,
+            "gender": new_profile.gender,
+            "gender_probability": new_profile.gender_probability,
+            "sample_size": new_profile.sample_size,
+            "age": new_profile.age,
+            "age_group": new_profile.age_group,
+            "country_id": new_profile.country_id,
+            "country_probability": new_profile.country_probability,
+            "created_at": new_profile.created_at,
+        }
     }
-}
